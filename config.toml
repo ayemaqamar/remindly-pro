@@ -1,0 +1,8 @@
+
+[theme]
+base = "light"
+primaryColor = "#8e44ad"                 # Royal purple vibes 👑
+backgroundColor = "#f7f9fc"              # Soft pastel background
+secondaryBackgroundColor = "#fce4ec"     # Blush pink card bg 💗
+textColor = "#2c3e50"                    # Dark elegant text
+font = "sans serif"
