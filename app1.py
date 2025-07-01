@@ -5,7 +5,6 @@ import time
 import joblib
 from datetime import datetime
 from streamlit_lottie import st_lottie
-from streamlit_extras.let_it_rain import rain
 
 # ========== CONFIG ==========
 PUSHBULLET_TOKEN = "o.tRFNrj1kkwYhpNZKuqcf7cPIRk0lfKv9"
@@ -52,6 +51,7 @@ model, inv_label_map = load_model()
 
 # ========== PAGE CONFIG ==========
 st.set_page_config(page_title="Remindly Pro", page_icon="💼", layout="wide")
+
 st.markdown("""
 <style>
     html, body, [class*="css"] {
@@ -120,7 +120,7 @@ def show_reminder():
             st_lottie(clock, height=180)
 
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("Schedule Your Tasks")
+    st.subheader("📅 Task Scheduler")
     num_tasks = st.slider("Number of tasks", 1, 5, 2)
     tasks = []
 
@@ -146,37 +146,40 @@ def show_reminder():
     st.markdown('</div>', unsafe_allow_html=True)
 
     if submitted:
-        with st.spinner("Predicting priorities using AI..."):
-            time.sleep(1.2)
+        with st.spinner("Predicting task priorities..."):
+            time.sleep(1)
         df = pd.DataFrame(tasks)
         df["Today"] = datetime.now()
         df["Days_Left"] = (df["Deadline"] - df["Today"]).dt.total_seconds() / 86400
         features = df[["Urgency_Level", "Days_Left", "User_History_Delay"]]
-        df["Priority_Label"] = model.predict(features)
-        df["Priority_Label"] = df["Priority_Label"].map(inv_label_map)
+        df["Priority"] = model.predict(features)
+        df["Priority"] = df["Priority"].map(inv_label_map)
 
-        rain(emoji="🤖", font_size=36, falling_speed=5)
         st_lottie(load_lottie_url(LOTTIE_TASK_SUCCESS), height=180)
 
+        display_df = df.rename(columns={
+            "Urgency_Level": "Urgency",
+            "User_History_Delay": "Delay History",
+            "Days_Left": "Days Remaining"
+        })
+
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("AI-Powered Task Summary")
-        st.dataframe(df[["Task", "Deadline", "Urgency_Level", "Days_Left", "User_History_Delay", "Priority_Label"]], use_container_width=True)
+        st.subheader("📋 Task Overview")
+        st.dataframe(display_df[["Task", "Deadline", "Urgency", "Days Remaining", "Delay History", "Priority"]], use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("Notifications Sent")
+        st.subheader("📬 Notifications")
         for _, row in df.iterrows():
-            if row["Priority_Label"] == "Urgent":
-                if send_push_notification(row["Task"], row["Deadline"], row["Priority_Label"]):
-                    st.success(f"🔔 Sent: {row['Task']}")
+            if row["Priority"] == "Urgent":
+                if send_push_notification(row["Task"], row["Deadline"], row["Priority"]):
+                    st.success(f"🔔 Notification sent: {row['Task']}")
                 else:
-                    st.error(f"❌ Failed: {row['Task']}")
+                    st.error(f"❌ Failed to notify: {row['Task']}")
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ========== ROUTING ==========
 if "page" in st.query_params and st.query_params["page"] == "reminder":
     show_reminder()
 else:
-    show_home()   
-
-
+    show_home()
