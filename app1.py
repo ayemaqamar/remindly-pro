@@ -3,7 +3,7 @@ import pandas as pd
 import requests
 import time
 import joblib
-from datetime import datetime
+from datetime import datetime, timedelta
 from streamlit_lottie import st_lottie
 
 # ========== CONFIG ==========
@@ -13,6 +13,8 @@ LOTTIE_BACKGROUND_FLOATS = "https://assets2.lottiefiles.com/packages/lf20_vf1pbr
 LOTTIE_CHECKLIST = "https://assets2.lottiefiles.com/packages/lf20_touohxv0.json"
 LOTTIE_CLOCK = "https://assets10.lottiefiles.com/packages/lf20_qp1q7mct.json"
 LOTTIE_TASK_SUCCESS = "https://assets5.lottiefiles.com/private_files/lf30_m6j5igxb.json"
+
+task_history = []
 
 # ========== LOAD LOTTIE ==========
 def load_lottie_url(url):
@@ -48,6 +50,33 @@ def load_model():
     return model, inv_label_map
 
 model, inv_label_map = load_model()
+
+# ========== SMART NOTIFICATION LOGIC ==========
+def should_notify(row):
+    priority = row["Priority"]
+    deadline = row["Deadline"]
+    now = datetime.now()
+    hours_left = (deadline - now).total_seconds() / 3600
+
+    if priority == "Urgent":
+        return True
+    elif priority == "Medium" and hours_left <= 24:
+        return True
+    elif priority == "Low" and hours_left <= 6:
+        return True
+    return False
+
+# ========== FEATURE HELPERS ==========
+def detect_recurring(task):
+    for past in task_history:
+        if task.lower() == past.lower():
+            return True
+    return False
+
+def suggest_task():
+    if task_history:
+        return task_history[-1]
+    return ""
 
 # ========== PAGE CONFIG ==========
 st.set_page_config(page_title="Remindly Pro", page_icon="💼", layout="wide")
@@ -129,17 +158,20 @@ def show_reminder():
             st.markdown(f"### Task {i+1}")
             col1, col2 = st.columns(2)
             with col1:
-                name = st.text_input("Task Title", key=f"name_{i}")
-                urgency = st.selectbox("Urgency", ["Low", "Medium", "High"], key=f"urg_{i}")
-                urgency_score = {"Low": 1, "Medium": 2, "High": 3}[urgency]
+                suggested = suggest_task()
+                name = st.text_input("Task Title", value=suggested, key=f"name_{i}")
                 date = st.date_input("Deadline", key=f"date_{i}")
                 task_time = st.time_input("Time", key=f"time_{i}")
             with col2:
                 delay = st.radio("Was this delayed before?", ["No", "Yes"], key=f"del_{i}", horizontal=True)
+                recurring = detect_recurring(name)
+                recurring_label = "🔁 Yes" if recurring else "❌ No"
+                st.markdown(f"Recurring Task: **{recurring_label}**")
+            task_history.append(name)
             tasks.append({
                 "Task": name,
                 "Deadline": datetime.combine(date, task_time),
-                "Urgency_Level": urgency_score,
+                "Urgency_Level": 0,  # Let the model predict it
                 "User_History_Delay": 1 if delay == "Yes" else 0
             })
         submitted = st.form_submit_button("Prioritize & Notify")
@@ -171,11 +203,13 @@ def show_reminder():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📬 Notifications")
         for _, row in df.iterrows():
-            if row["Priority"] == "Urgent":
+            if should_notify(row):
                 if send_push_notification(row["Task"], row["Deadline"], row["Priority"]):
                     st.success(f"🔔 Notification sent: {row['Task']}")
                 else:
                     st.error(f"❌ Failed to notify: {row['Task']}")
+            else:
+                st.info(f"⏳ Snoozed till later: {row['Task']} ({row['Priority']})")
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ========== ROUTING ==========
