@@ -1,8 +1,7 @@
-
 [theme]
-base = "light"
-primaryColor = "#8e44ad"                 # Royal purple vibes 👑
-backgroundColor = "#f7f9fc"              # Soft pastel background
-secondaryBackgroundColor = "#fce4ec"     # Blush pink card bg 💗
-textColor = "#2c3e50"                    # Dark elegant text
-font = "sans serif"
+base = "dark"                            # Dark mode is a must for that neon glow ✨
+primaryColor = "#00ffe0"                 # Aqua neon for buttons & highlights 💧
+backgroundColor = "#0f0f1a"              # Deep dark background for high contrast 🌌
+secondaryBackgroundColor = "#1a1a2e"     # Slightly lighter dark shade for cards 🎴
+textColor = "#f0f0f0"                    # Bright text on dark bg 🌟
+font = "sans serif"                      # Clean, modern sans-serif font

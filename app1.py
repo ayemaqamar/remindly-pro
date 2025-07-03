@@ -61,9 +61,6 @@ def should_notify(row):
            (priority == "Medium" and hours_left <= 24) or \
            (priority == "Low" and hours_left <= 6)
 
-def suggest_task():
-    return task_history[-1] if task_history else ""
-
 # ========== PAGE CONFIG ==========
 st.set_page_config(page_title="Remindly Pro", page_icon="💼", layout="wide")
 
@@ -150,6 +147,17 @@ def show_home():
 def show_reminder():
     st.markdown('<div class="title neon">🧠 Task Reminder Assistant</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle neon">Organize with precision. Prioritize with power.</div>', unsafe_allow_html=True)
+    
+    # 🎨 Side-by-side animations
+    col1, col2 = st.columns(2)
+    with col1:
+        animation1 = load_lottie_url(LOTTIE_CUSTOM_1)
+        if animation1:
+            st_lottie(animation1, height=200)
+    with col2:
+        animation2 = load_lottie_url(LOTTIE_CUSTOM_2)
+        if animation2:
+            st_lottie(animation2, height=200)
 
     st.markdown('<div class="neo-card">', unsafe_allow_html=True)
     st.subheader("🗓 Task Scheduler")
@@ -207,11 +215,13 @@ def show_reminder():
             else:
                 st.info(f"⏳ Snoozed: {row['Task']} ({row['Priority']})")
 
-        st.markdown('<div class="title neon" style="font-size: 28px;">📆 Days Left Before Deadline</div>', unsafe_allow_html=True)
+        st.markdown('<div class="title neon" style="font-size: 28px;">📆 Deadline Summary</div>', unsafe_allow_html=True)
         if not df.empty:
-            avg_days = df["Days remaining"].mean()
-            display_days = 0 if abs(avg_days) < 0.05 else round(avg_days, 1)
-            st.metric("", f"{display_days} days")
+            next_deadline = df["Days remaining"].min()
+            median_days = df["Days remaining"].median()
+
+            st.metric("⏳ Closest Task In", f"{round(next_deadline,1)} days")
+            st.metric("📊 Days Remaining for other tasks", f"{round(median_days,1)} days")
 
             st.subheader("💜 Upcoming Tasks")
             st.table(df[["Task", "Deadline", "Priority"]].sort_values("Deadline").head(5))
@@ -220,7 +230,6 @@ def show_reminder():
 
 # ========== ROUTING ==========
 query_params = st.query_params if hasattr(st, "query_params") else {}
-
 page_param = query_params.get("page", "")
 if isinstance(page_param, list):
     page_param = page_param[0]
